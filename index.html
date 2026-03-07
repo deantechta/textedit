@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>텍스트 방향 변환기</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       --bg: #f0f2f5;
@@ -245,6 +246,20 @@
     .copy-btn:active { transform: scale(0.97); }
     .copy-btn.success { background: var(--success); }
 
+    .dl-btn {
+      padding: 0.45rem 1.1rem;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .dl-btn:hover { background: #15803d; }
+    .dl-btn:active { transform: scale(0.97); }
+
     .status-msg {
       font-size: 0.8rem;
       color: var(--success);
@@ -378,6 +393,7 @@
       <div class="section-label" style="margin-bottom:0;" id="outputLabel">결과</div>
       <div style="display:flex;align-items:center;gap:0.75rem;">
         <span class="item-count" id="itemCount"></span>
+        <button class="dl-btn" onclick="downloadExcel()">엑셀 다운로드</button>
         <button class="copy-btn" id="copyBtn" onclick="copyOutput()">복사</button>
       </div>
     </div>
@@ -390,6 +406,7 @@
 
 <script>
   let mode = 'vertical';
+  let lastItems = [];
 
   // --- Mode ---
   function setMode(m) {
@@ -447,6 +464,7 @@
 
     const joinToken = sep + (spaceAfter ? ' ' : '');
     const result = lines.join(joinToken);
+    lastItems = lines;
 
     document.getElementById('outputArea').value = result;
     document.getElementById('itemCount').textContent = lines.length ? `${lines.length}개 항목` : '';
@@ -481,8 +499,25 @@
     if (dedupH) parts = [...new Set(parts)];
 
     const result = parts.join('\n');
+    lastItems = parts;
+
     document.getElementById('outputArea').value = result;
     document.getElementById('itemCount').textContent = parts.length ? `${parts.length}개 항목` : '';
+  }
+
+  // --- Excel Download ---
+  function downloadExcel() {
+    if (!lastItems.length) return;
+
+    // 세로→가로: 항목을 한 행에 여러 열로 / 가로→세로: 항목을 한 열에 여러 행으로
+    const data = mode === 'vertical'
+      ? [lastItems]
+      : lastItems.map(item => [item]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '변환결과');
+    XLSX.writeFile(wb, '변환결과.xlsx');
   }
 
   // --- Copy ---
