@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>텍스트 방향 변환기</title>
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --border: #d1d5db;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --input-bg: #ffffff;
+      --output-bg: #f8fafc;
+      --tag-bg: #eff6ff;
+      --tag-border: #bfdbfe;
+      --success: #10b981;
+      --radius: 10px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --border: #334155;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --input-bg: #1e293b;
+        --output-bg: #0f172a;
+        --tag-bg: #1e3a5f;
+        --tag-border: #2563eb;
+        --shadow: 0 2px 12px rgba(0,0,0,0.4);
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 0.35rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 0.55rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--tag-bg);
+    }
+
+    /* Textareas */
+    textarea {
+      width: 100%;
+      font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text);
+      resize: vertical;
+      min-height: 130px;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea.output {
+      background: var(--output-bg);
+      min-height: 90px;
+    }
+
+    /* Options */
+    .options-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .opt-group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.875rem;
+    }
+
+    .opt-group label {
+      cursor: pointer;
+      user-select: none;
+      color: var(--text);
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .sep-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    select, input[type="text"] {
+      padding: 0.4rem 0.6rem;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    select:focus, input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    #customSepInput, #fixedLenInput {
+      width: 110px;
+    }
+
+    #fixedLenInput {
+      width: 70px;
+    }
+
+    #suffixInput {
+      width: 200px;
+    }
+
+    .hidden { display: none !important; }
+
+    /* Horizontal split options */
+    .split-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Output area */
+    .output-wrapper {
+      position: relative;
+    }
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .item-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .copy-btn {
+      padding: 0.45rem 1.1rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .copy-btn:hover { background: var(--accent-hover); }
+    .copy-btn:active { transform: scale(0.97); }
+    .copy-btn.success { background: var(--success); }
+
+    .status-msg {
+      font-size: 0.8rem;
+      color: var(--success);
+      height: 1.2rem;
+      margin-top: 0.4rem;
+      text-align: right;
+    }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1.5px solid var(--border);
+      margin: 1rem 0;
+    }
+
+    @media (max-width: 540px) {
+      body { padding: 1rem 0.75rem; }
+      header h1 { font-size: 1.3rem; }
+      #suffixInput { width: 100%; }
+      .copy-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>텍스트 방향 변환기</h1>
+    <p>Excel 열 데이터 ↔ 한 줄 텍스트 변환</p>
+  </header>
+
+  <div class="card">
+    <!-- Mode toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modeVertical" onclick="setMode('vertical')">↓ 세로 → 가로</button>
+      <button class="mode-btn" id="modeHorizontal" onclick="setMode('horizontal')">→ 가로 → 세로</button>
+    </div>
+
+    <!-- Input -->
+    <div class="section-label" id="inputLabel">입력 (세로 데이터 붙여넣기)</div>
+    <textarea id="inputArea" placeholder="여기에 붙여넣기 하세요..." autofocus></textarea>
+
+    <hr class="divider" />
+
+    <!-- Options: Vertical → Horizontal -->
+    <div id="optionsVertical">
+      <div class="section-label">옵션</div>
+
+      <!-- Separator -->
+      <div class="sep-row">
+        <span style="font-size:0.875rem;">구분자</span>
+        <select id="sepSelect">
+          <option value=",">쉼표 ,</option>
+          <option value=";">세미콜론 ;</option>
+          <option value="|">파이프 |</option>
+          <option value=" ">공백</option>
+          <option value="	">탭</option>
+          <option value="custom">직접입력</option>
+        </select>
+        <input type="text" id="customSepInput" class="hidden" placeholder="구분자 입력" maxlength="10" />
+      </div>
+
+      <!-- Suffix -->
+      <div class="sep-row">
+        <span style="font-size:0.875rem;">접미사 추가</span>
+        <input type="text" id="suffixInput" placeholder="예) @linecorp.com" />
+      </div>
+
+      <!-- Checkboxes -->
+      <div class="options-grid">
+        <div class="opt-group">
+          <input type="checkbox" id="chkSpace" checked />
+          <label for="chkSpace">구분자 뒤 공백</label>
+        </div>
+        <div class="opt-group">
+          <input type="checkbox" id="chkSkipEmpty" checked />
+          <label for="chkSkipEmpty">빈 줄 건너뜀</label>
+        </div>
+        <div class="opt-group">
+          <input type="checkbox" id="chkTrim" checked />
+          <label for="chkTrim">앞뒤 공백 제거</label>
+        </div>
+        <div class="opt-group">
+          <input type="checkbox" id="chkDedup" checked />
+          <label for="chkDedup">중복 제거</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Options: Horizontal → Vertical -->
+    <div id="optionsHorizontal" class="hidden">
+      <div class="section-label">분리 방식</div>
+      <div class="split-options">
+        <select id="splitMode">
+          <option value="sep">구분자로 분리</option>
+          <option value="space">공백/탭으로 분리</option>
+          <option value="fixed">고정 글자수로 자르기</option>
+          <option value="custom">직접입력 구분자</option>
+        </select>
+        <select id="splitSepSelect">
+          <option value=",">쉼표 ,</option>
+          <option value=";">세미콜론 ;</option>
+          <option value="|">파이프 |</option>
+          <option value="	">탭</option>
+        </select>
+        <input type="text" id="splitCustomInput" class="hidden" placeholder="구분자 입력" maxlength="10" />
+        <span id="fixedLenWrap" class="hidden" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
+          <input type="number" id="fixedLenInput" value="10" min="1" max="999" />
+          글자씩
+        </span>
+      </div>
+      <div class="options-grid">
+        <div class="opt-group">
+          <input type="checkbox" id="chkTrimH" checked />
+          <label for="chkTrimH">앞뒤 공백 제거</label>
+        </div>
+        <div class="opt-group">
+          <input type="checkbox" id="chkSkipEmptyH" checked />
+          <label for="chkSkipEmptyH">빈 항목 건너뜀</label>
+        </div>
+        <div class="opt-group">
+          <input type="checkbox" id="chkDedupH" checked />
+          <label for="chkDedupH">중복 제거</label>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Output -->
+    <div class="output-header">
+      <div class="section-label" style="margin-bottom:0;" id="outputLabel">결과</div>
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <span class="item-count" id="itemCount"></span>
+        <button class="copy-btn" id="copyBtn" onclick="copyOutput()">복사</button>
+      </div>
+    </div>
+    <div class="output-wrapper">
+      <textarea class="output" id="outputArea" readonly placeholder="변환 결과가 여기에 표시됩니다."></textarea>
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+</div>
+
+<script>
+  let mode = 'vertical';
+
+  // --- Mode ---
+  function setMode(m) {
+    mode = m;
+    document.getElementById('modeVertical').classList.toggle('active', m === 'vertical');
+    document.getElementById('modeHorizontal').classList.toggle('active', m === 'horizontal');
+    document.getElementById('optionsVertical').classList.toggle('hidden', m !== 'vertical');
+    document.getElementById('optionsHorizontal').classList.toggle('hidden', m !== 'horizontal');
+    document.getElementById('inputLabel').textContent = m === 'vertical'
+      ? '입력 (세로 데이터 붙여넣기)'
+      : '입력 (가로 텍스트 붙여넣기)';
+    convert();
+  }
+
+  // --- Separator visibility (vertical mode) ---
+  document.getElementById('sepSelect').addEventListener('change', function () {
+    document.getElementById('customSepInput').classList.toggle('hidden', this.value !== 'custom');
+    convert();
+  });
+
+  // --- Split mode visibility (horizontal mode) ---
+  document.getElementById('splitMode').addEventListener('change', function () {
+    const v = this.value;
+    document.getElementById('splitSepSelect').classList.toggle('hidden', v !== 'sep');
+    document.getElementById('splitCustomInput').classList.toggle('hidden', v !== 'custom');
+    const fixedWrap = document.getElementById('fixedLenWrap');
+    fixedWrap.classList.toggle('hidden', v !== 'fixed');
+    fixedWrap.style.display = v === 'fixed' ? 'inline-flex' : '';
+    convert();
+  });
+
+  // --- Convert ---
+  function convert() {
+    if (mode === 'vertical') convertVertical();
+    else convertHorizontal();
+  }
+
+  function convertVertical() {
+    const raw = document.getElementById('inputArea').value;
+    const sepVal = document.getElementById('sepSelect').value;
+    const sep = sepVal === 'custom'
+      ? document.getElementById('customSepInput').value
+      : sepVal;
+    const spaceAfter = document.getElementById('chkSpace').checked;
+    const skipEmpty  = document.getElementById('chkSkipEmpty').checked;
+    const trim       = document.getElementById('chkTrim').checked;
+    const dedup      = document.getElementById('chkDedup').checked;
+    const suffix     = document.getElementById('suffixInput').value;
+
+    let lines = raw.replace(/\r/g, '').split('\n');
+    if (trim) lines = lines.map(l => l.trim());
+    if (skipEmpty) lines = lines.filter(l => l.length > 0);
+    if (dedup) lines = [...new Set(lines)];
+    if (suffix) lines = lines.map(l => l + suffix);
+
+    const joinToken = sep + (spaceAfter ? ' ' : '');
+    const result = lines.join(joinToken);
+
+    document.getElementById('outputArea').value = result;
+    document.getElementById('itemCount').textContent = lines.length ? `${lines.length}개 항목` : '';
+  }
+
+  function convertHorizontal() {
+    const raw = document.getElementById('inputArea').value.replace(/\r/g, '');
+    const splitMode   = document.getElementById('splitMode').value;
+    const trimH       = document.getElementById('chkTrimH').checked;
+    const skipEmptyH  = document.getElementById('chkSkipEmptyH').checked;
+    const dedupH      = document.getElementById('chkDedupH').checked;
+
+    let parts = [];
+
+    if (splitMode === 'sep') {
+      const sep = document.getElementById('splitSepSelect').value;
+      parts = raw.split(sep);
+    } else if (splitMode === 'space') {
+      parts = raw.split(/[ \t]+/);
+    } else if (splitMode === 'fixed') {
+      const len = parseInt(document.getElementById('fixedLenInput').value, 10) || 1;
+      const flat = raw.replace(/\n/g, '');
+      parts = [];
+      for (let i = 0; i < flat.length; i += len) parts.push(flat.slice(i, i + len));
+    } else if (splitMode === 'custom') {
+      const sep = document.getElementById('splitCustomInput').value;
+      parts = sep ? raw.split(sep) : [raw];
+    }
+
+    if (trimH) parts = parts.map(p => p.trim());
+    if (skipEmptyH) parts = parts.filter(p => p.length > 0);
+    if (dedupH) parts = [...new Set(parts)];
+
+    const result = parts.join('\n');
+    document.getElementById('outputArea').value = result;
+    document.getElementById('itemCount').textContent = parts.length ? `${parts.length}개 항목` : '';
+  }
+
+  // --- Copy ---
+  function copyOutput() {
+    const text = document.getElementById('outputArea').value;
+    if (!text) return;
+    const btn = document.getElementById('copyBtn');
+
+    const success = () => {
+      btn.textContent = '복사됨 ✓';
+      btn.classList.add('success');
+      showStatus('클립보드에 복사되었습니다.');
+      setTimeout(() => {
+        btn.textContent = '복사';
+        btn.classList.remove('success');
+      }, 2000);
+    };
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(success).catch(() => fallbackCopy(text, success));
+    } else {
+      fallbackCopy(text, success);
+    }
+  }
+
+  function fallbackCopy(text, cb) {
+    const ta = document.getElementById('outputArea');
+    ta.select();
+    try { document.execCommand('copy'); cb(); } catch (e) {}
+  }
+
+  function showStatus(msg) {
+    const el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    setTimeout(() => { el.textContent = ''; }, 2000);
+  }
+
+  // --- Event listeners ---
+  ['input', 'change'].forEach(ev => {
+    ['inputArea', 'customSepInput', 'suffixInput', 'splitCustomInput', 'fixedLenInput', 'splitSepSelect']
+      .forEach(id => document.getElementById(id).addEventListener(ev === 'input' ? 'input' : 'change', convert));
+  });
+
+  ['chkSpace','chkSkipEmpty','chkTrim','chkDedup','chkTrimH','chkSkipEmptyH','chkDedupH']
+    .forEach(id => document.getElementById(id).addEventListener('change', convert));
+
+  // init
+  convert();
+</script>
+</body>
+</html>
